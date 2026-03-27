@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 # base_model = "models/Qwen2.5-32B"
 # adapter_model = "models/fine-tuned/Qwen2.5-32B-mem-recall-qa"
 data_path = "datasets/longmemeval_data/curated_data.json"
@@ -124,8 +130,6 @@ for i in range(len(dataraw)):
     data[split]["answer"] += [str(dataraw[i]["answer"])]
     data[split]["context"] += ["Memory evidence:"+"\nMemory evidence:".join(dataraw[i]["memory"])]
 
-dataset = Dataset.from_dict(data["train"])
-        
 dataset = Dataset.from_dict(data["train"])
 
 dataset = dataset.map(

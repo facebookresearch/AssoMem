@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 
 import torch
@@ -21,14 +27,16 @@ class BGERetrieval:
         return content_embeddings
 
     def retrieve(self, query, content, top_k=10):
-        query_embeddings = torch.tensor(self.embed_query(query))[0]
-        content_embeddings = torch.tensor(self.embed_content(content))[0]
+        # query embedding: encode_queries returns (1, D) for a single query string
+        query_embeddings = torch.tensor(self.embed_query(query))  # (1, D)
+        # content embeddings: encode returns (N, D) for a list of N strings
+        content_embeddings = torch.tensor(self.embed_content(content))  # (N, D)
 
-        # print(query_embeddings)
-        # print(content_embeddings)
+        # Compute cosine similarity between the single query and each content item
+        similarities = torch.nn.functional.cosine_similarity(
+            query_embeddings, content_embeddings
+        ).tolist()  # list of N scores
 
-        similarities = torch.nn.functional.cosine_similarity(query_embeddings.unsqueeze(0), content_embeddings.unsqueeze(0)).tolist()
-        print(similarities)
         top_indices = sorted(range(len(similarities)), key=lambda i: similarities[i], reverse=True)[:top_k]
 
         return [content[idx] for idx in top_indices]

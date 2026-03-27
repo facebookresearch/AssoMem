@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import json
 import re
 import torch
@@ -31,8 +37,8 @@ class Memory:
     def search_memory(self, query, embeddings_model, memory_type='short_term', top_k=5):
         if self.memory_type == 'lst_memory':
             memory_texts = self.short_term_memory+self.long_term_memory
-        elif self.memory_type == 'topic_based':
-            memory_texts = [memory['entry'] for memory in self.topic_based_memory]
+        elif self.memory_type == 'topic_memory':
+            memory_texts = [memory['entry'] for memory in self.topic_memory]
         else:
             raise ValueError("Invalid memory type specified.")
 
@@ -50,8 +56,8 @@ class Memory:
             reverse=True,
         )[:top_k]
 
-        if memory_type == 'topic_memory':
-            return [(self.topic_based_memory[idx]['entry'], self.topic_based_memory[idx]['raw_dialogue']) for idx in top_indices]
+        if self.memory_type == 'topic_memory':
+            return [(self.topic_memory[idx]['entry'], self.topic_memory[idx]['raw_dialogue']) for idx in top_indices]
         else:
             return [memory_texts[idx] for idx in top_indices]
 
@@ -75,7 +81,7 @@ def process_session(session, agent, memory_instance):
         prompt = INSTRUCTION_TOPIC_MEMORY.format(session=session)
     else:
         prompt=""
-        assert "Memory Not Support"
+        assert False, "Memory type not supported"
     response = agent(prompt)
     try:
         match = re.search(pattern, response)

@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 INSTRUCTION_LST_MEMORY = '''
 ### TASK DESCRIPTION
 You are a helpful assistant that helps users to organize their memory records. 

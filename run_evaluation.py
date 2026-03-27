@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import torch
 import json
 from torch.nn.functional import cosine_similarity
@@ -141,5 +147,5 @@ if __name__ == "__main__":
     with open(r"results/top_k_results_sentence.json", "w", encoding="utf-8") as f:
         json.dump(top_k_results_sentence, f)
     
-    with open(r"results/top_k_retuls_session.json", "w", encoding="utf-8") as f:
+    with open(r"results/top_k_results_session.json", "w", encoding="utf-8") as f:
         json.dump(top_k_results_session, f)

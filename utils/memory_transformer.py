@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -114,6 +120,11 @@ class MemoryEnhancedTransformer(nn.Module):
     
 
 # --------------------------------------Dataset Loader-----------------------------------------
+# Constants (must be defined before Dataset classes that reference them)
+n_embd = 256
+MAX_TOKEN_LENGTH = 512
+MAX_QUERY_LENGTH = 128
+
 # Initialize the tokenizer
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
@@ -194,10 +205,7 @@ def collate_fn(batch):
     labels = torch.stack(labels)
     return queries, historical_streams, labels
 
-dataset = FlattenedLongMemEvalDataset(longmemeval_s)
-
-
-def train_model(model, dataset, epochs=3, batch_size=16, learning_rate=1e-4):
+def train_model(model, dataset, device, n_embd, compressive_memory_size, epochs=3, batch_size=16, learning_rate=1e-4):
     dataloader = DataLoader(
         dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn
     )
@@ -220,10 +228,10 @@ def train_model(model, dataset, epochs=3, batch_size=16, learning_rate=1e-4):
                     has_answer.to(device),
                 )
                 optimizer.zero_grad()
-                
+
                 # Ensure the historical_stream is reshaped into 3D tensor
                 historical_stream = historical_stream.view(historical_stream.size(0), -1, n_embd)
-                
+
                 # Correct dimension mismatch for the flattening operation
                 historical_stream_flattened = historical_stream.view(-1, n_embd)
                 compressive_memory = model.compress_memory(historical_stream_flattened)
@@ -232,12 +240,12 @@ def train_model(model, dataset, epochs=3, batch_size=16, learning_rate=1e-4):
                 # Process each session with sparse attention
                 for block in model.sparse_attention_blocks:
                     hidden_representations = block(query, hidden_representations, hidden_representations)
-                    
+
                 # Use query for QKV calculation
-                query_memory = torch.cat((query, hidden_representations), dim=2)  # Change dim=1 to dim=2
+                query_memory = torch.cat((query, hidden_representations), dim=2)
                 query_memory_reshaped = query_memory.view(batch_size, -1, compressive_memory_size)
                 saliency_representation = model.output_layer(query_memory_reshaped)
-                
+
                 # Convert hidden representations to a saliency map
                 saliency_map = torch.sigmoid(saliency_representation.view(-1))
                 # Calculate loss
@@ -251,33 +259,41 @@ def train_model(model, dataset, epochs=3, batch_size=16, learning_rate=1e-4):
             pbar.update(1)
 
 
-# Initialize MemoryEnhancedTransformer
-n_embd = 256
-heads = 4
-attn_mode = "local"
-local_attn_ctx = 32
-blocksize = 32
-input_dim = n_embd
-hidden_dim = n_embd * 2
-num_layers = 2
-compressive_memory_size = n_embd
-transformer_model = MemoryEnhancedTransformer(
-    input_dim,
-    hidden_dim,
-    heads,
-    num_layers,
-    compressive_memory_size,
-    attn_mode,
-    local_attn_ctx,
-    blocksize,
-)
+if __name__ == "__main__":
+    import json
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Hyperparameters
+    heads = 4
+    attn_mode = "local"
+    local_attn_ctx = 32
+    blocksize = 32
+    input_dim = n_embd
+    hidden_dim = n_embd * 2
+    num_layers = 2
+    compressive_memory_size = n_embd
 
-# Use only one GPU
-model = transformer_model
-model.to(device)
+    transformer_model = MemoryEnhancedTransformer(
+        input_dim,
+        hidden_dim,
+        heads,
+        num_layers,
+        compressive_memory_size,
+        attn_mode,
+        local_attn_ctx,
+        blocksize,
+    )
 
-# Use the LongMemEvalDataset for training
-# dataset = FlattenedLongMemEvalDataset(longmemeval_s)
-train_model(model, dataset)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = transformer_model.to(device)
+
+    # Load dataset -- provide path to your LongMemEval JSON file
+    import sys
+    if len(sys.argv) < 2:
+        print("Usage: python memory_transformer.py <path_to_longmemeval.json>")
+        sys.exit(1)
+
+    with open(sys.argv[1], 'r') as f:
+        longmemeval_data = json.load(f)
+
+    dataset = FlattenedLongMemEvalDataset(longmemeval_data)
+    train_model(model, dataset, device, n_embd, compressive_memory_size)

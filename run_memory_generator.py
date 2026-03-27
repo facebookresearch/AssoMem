@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import re
 pattern = r"{.*}"
 import os
@@ -32,7 +38,7 @@ def run_memory_generator(dataset, memory_type: str, generator_path, instruction:
         memory = Memory(memory_type)
         for session in data["haystack_sessions"]:
             # Prepare the input prompt
-            input_prompt = instruction.format(session=data)
+            input_prompt = instruction.format(session=session)
             
             # Tokenize the input
             inputs = tokenizer(input_prompt, return_tensors="pt")
@@ -56,7 +62,7 @@ def run_memory_generator(dataset, memory_type: str, generator_path, instruction:
                 except Exception as e:
                     print(e)
             elif memory_type == "Topic":
-                memory.add_to_topic_memory(topic=generated_text, raw_dialogue=[content["utterance"] for content in session])
+                memory.add_to_topic_memory(entry=generated_text, raw_dialogue=[content["content"] for content in session])
             else:
                 print("Not supporting memory type")
 

@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import json
@@ -29,19 +35,20 @@ def generate(config, data):
             memory = [str(session) for session in pair["haystack_sessions"]]
             input_text = INSTRUCTION_GENERATION.format(memory=memory, question=pair["question"])
 
-            # Chunk the input text
-            input_chunks = [input_text[i:i+config.chunk_size] for i in range(0, len(input_text), config.chunk_size)]
+            # Tokenize the full input, then chunk by token count
+            full_input_ids = tokenizer.encode(input_text, return_tensors='pt', truncation=False)
+            token_chunks = []
+            for i in range(0, full_input_ids.size(1), config.chunk_size):
+                end = min(i + config.chunk_size, full_input_ids.size(1))
+                token_chunks.append(full_input_ids[:, i:end])
 
             generated_text = ""
-            for chunk in input_chunks:
-                inputs = tokenizer(chunk,
-                                   max_length=config.max_length, 
-                                   truncation=True,
-                                   padding=True,
-                                   return_tensors="pt").to(accelerator.device)
-                outputs = model.generate(**inputs, max_length=config.max_length, num_return_sequences=1)
+            for chunk_ids in token_chunks:
+                chunk_ids = chunk_ids.to(accelerator.device)
+                outputs = model.generate(chunk_ids, max_length=config.max_length, num_return_sequences=1)
                 generated_chunk = tokenizer.decode(outputs[0], skip_special_tokens=True)
-                generated_text += generated_chunk.replace(chunk, "").strip()
+                chunk_text = tokenizer.decode(chunk_ids[0], skip_special_tokens=True)
+                generated_text += generated_chunk.replace(chunk_text, "").strip()
                 gpu_info = torch.cuda.memory_allocated("cuda")
                 print(f"GPU Memory Allocated: {gpu_info / (1024 ** 2):.2f} MB")
 
