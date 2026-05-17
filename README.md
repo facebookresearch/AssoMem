@@ -204,10 +204,13 @@ Run `python run.py --help` for the complete list of parameters.
 ## Citation
 
 ```bibtex
-@article{assomem2025,
-  title={AssoMem: Scalable Memory QA with Multi-Signal Associative Retrieval},
-  year={2025},
-  url={https://arxiv.org/abs/2510.10397}
+@inproceedings{
+zhang2026assomem,
+title={AssoMem: Scalable Memory {QA} with Multi-Signal Associative Retrieval},
+author={Kai Zhang and Xinyuan Zhang and Ejaz Ahmed and Hongda Jiang and Caleb Kumar and Kai Sun and Zhaojiang Lin and Sanat Sharma and Shereen Oraby and AARON COLAK and Ahmed A Aly and Anuj Kumar and Xiaozhong Liu and Xin Luna Dong},
+booktitle={The Fourteenth International Conference on Learning Representations},
+year={2026},
+url={https://openreview.net/forum?id=ZCjWUBwCwE}
 }
 ```
 
