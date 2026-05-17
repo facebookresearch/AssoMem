@@ -6,34 +6,99 @@
 
 import argparse
 
+
 def get_config():
-    parser = argparse.ArgumentParser(description="In-Context Learning Configuration")
+    parser = argparse.ArgumentParser(description="AssoMem Configuration")
 
-    # Mode selection
-    parser.add_argument('--method_type', type=str, default="context", help="method types: [context, embedding, parameters]")
+    # --- Mode ---
+    parser.add_argument(
+        "--stage",
+        type=str,
+        default="pipeline",
+        choices=["graph", "retrieve", "generate", "finetune", "evaluate", "pipeline"],
+        help="Which stage to run",
+    )
 
-    # Model and Dataset
-    parser.add_argument('--model_name', type=str, default='Llama-3.3-70B-Instruct', help='Name of the model')
-    parser.add_argument('--model_path', type=str, default='/models/Llama-3.3-70B-Instruct', help='Path of the model')
-    parser.add_argument('--dataset_name', type=str, default='LongMemEval', help='Name of the dataset to process')
-    parser.add_argument('--dataset_path', type=str, help='Path to the processed dataset')
-    parser.add_argument('--retrieval_name', type=str, default='BAAI/bge-base-en-v1.5', help='Name of the retriever used for retrieval')
+    # --- Model ---
+    parser.add_argument("--model_name", type=str, default="Llama-3.3-70B-Instruct")
+    parser.add_argument(
+        "--model_path", type=str, default="meta-llama/Llama-3.3-70B-Instruct"
+    )
 
-    # Training Arguments
-    parser.add_argument('--batch_size', type=int, default=8, help='Batch size for training')
-    parser.add_argument('--learning_rate', type=float, default=5e-5, help='Learning rate')
-    parser.add_argument('--num_epochs', type=int, default=3, help='Number of training epochs')
-    parser.add_argument('--save_path', type=str, default='models/fine-tuned/Qwen2.5-32B-mem-recall-qa')
+    # --- Dataset ---
+    parser.add_argument("--dataset_name", type=str, default="LongMemEval")
+    parser.add_argument("--dataset_path", type=str, required=False)
 
-    # Genertaion/Inference Arguments
-    parser.add_argument('--max_length', type=int, default=512)
-    parser.add_argument('--chunk_size', type=int, default=128)
-    parser.add_argument('--overlap', type=int, default=50)
+    # --- Embedding ---
+    parser.add_argument("--embedding_model", type=str, default="BAAI/bge-large-en-v1.5")
 
-    # Granularity
-    parser.add_argument('--granularity', type=str, default='utterance', choices=['utterance', 'session', 'round'], help='Granularity of context')
+    # --- Graph construction ---
+    parser.add_argument(
+        "--clue_merge_threshold",
+        type=float,
+        default=0.65,
+        help="Cosine similarity threshold for merging clues",
+    )
+    parser.add_argument(
+        "--utterance_sim_threshold",
+        type=float,
+        default=0.75,
+        help="Cosine similarity threshold for utterance-utterance edges",
+    )
 
-    # Output
-    parser.add_argument('--output_path', type=str, default='results', help='Path to save the generated results')
+    # --- Scoring ---
+    parser.add_argument(
+        "--ppr_damping",
+        type=float,
+        default=0.85,
+        help="Damping factor for Personalized PageRank",
+    )
+    parser.add_argument(
+        "--temporal_decay_weights",
+        type=float,
+        nargs=3,
+        default=[3.0, 90.0, 365.0],
+        help="Exponential decay time constants (short, mid, long)",
+    )
+    parser.add_argument(
+        "--cmi_temperature",
+        type=float,
+        default=1.0,
+        help="Temperature for CMI softmax weight assignment",
+    )
+
+    # --- Retrieval ---
+    parser.add_argument(
+        "--top_k_clues",
+        type=int,
+        default=10,
+        help="Number of top clues to retrieve in first stage",
+    )
+    parser.add_argument(
+        "--top_k_utterances",
+        type=int,
+        default=6,
+        help="Number of top utterances to return after RIT ranking",
+    )
+    parser.add_argument(
+        "--granularity", type=str, default="utterance", choices=["utterance", "session"]
+    )
+
+    # --- Generation ---
+    parser.add_argument("--max_new_tokens", type=int, default=128)
+    parser.add_argument("--max_input_length", type=int, default=4096)
+
+    # --- Finetuning (QLoRA) ---
+    parser.add_argument("--lora_r", type=int, default=16)
+    parser.add_argument("--lora_alpha", type=int, default=32)
+    parser.add_argument("--lora_dropout", type=float, default=0.05)
+    parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--learning_rate", type=float, default=5e-5)
+    parser.add_argument("--num_epochs", type=int, default=3)
+    parser.add_argument("--save_path", type=str, default="models/fine-tuned/assomem")
+
+    # --- Output ---
+    parser.add_argument("--output_path", type=str, default="results")
+    parser.add_argument("--graph_save_path", type=str, default="results/graph")
 
     return parser.parse_args()
